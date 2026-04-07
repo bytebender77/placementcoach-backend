@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.db.connection import create_pool, close_pool
-from app.routers import auth, resume, analysis, results
+from app.routers import auth, resume, analysis, results, opportunities
 
 
 @asynccontextmanager
@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="PlacementCoach API",
     description="AI-powered placement guidance for Indian college students",
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
@@ -42,8 +42,9 @@ app.include_router(auth.router)
 app.include_router(resume.router)
 app.include_router(analysis.router)
 app.include_router(results.router)
+app.include_router(opportunities.router)
 
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "env": settings.APP_ENV}
+    return {"status": "ok", "env": settings.APP_ENV, "version": "2.0.0"}
