@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from app.db.connection import get_db
 from app.core.dependencies import get_current_user
 import json
@@ -61,6 +61,62 @@ async def get_dashboard(
             "email": current_user["email"],
             "full_name": current_user["full_name"],
         },
+        "analysis": {
+            **analysis_dict,
+            "reasoning": scoring.get("reasoning", ""),
+            "top_positive_signals": scoring.get("top_positive_signals", []),
+            "top_risk_factors": scoring.get("top_risk_factors", []),
+            "one_line_verdict": raw.get("ats", {}).get("one_line_verdict", ""),
+            "formatting_issues": raw.get("ats", {}).get("formatting_issues", []),
+        },
+        "plan": plan_dict,
+    }
+
+
+@router.get("/results/{analysis_id}")
+async def get_dashboard_by_id(
+    analysis_id: str,
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    """Returns a specific analysis + action plan by analysis_id."""
+    user_id = str(current_user["id"])
+
+    analysis = await db.fetchrow(
+        """
+        SELECT id, placement_low, placement_high, placement_label,
+               ats_score, ats_strengths, ats_weaknesses, missing_keywords,
+               raw_llm_response, created_at
+        FROM analyses
+        WHERE id = $1 AND user_id = $2
+        """,
+        analysis_id, user_id,
+    )
+
+    if not analysis:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analysis not found.")
+
+    analysis_dict = dict(analysis)
+    raw = json.loads(analysis_dict.pop("raw_llm_response", "{}"))
+    scoring = raw.get("scoring", {})
+
+    plan = await db.fetchrow(
+        """
+        SELECT id, weeks, priority_skills, duration_weeks, created_at
+        FROM action_plans
+        WHERE analysis_id = $1
+        ORDER BY created_at DESC
+        LIMIT 1
+        """,
+        str(analysis["id"]),
+    )
+
+    plan_dict = None
+    if plan:
+        plan_dict = dict(plan)
+        plan_dict["weeks"] = json.loads(plan_dict["weeks"])
+
+    return {
         "analysis": {
             **analysis_dict,
             "reasoning": scoring.get("reasoning", ""),
