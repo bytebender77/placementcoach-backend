@@ -119,10 +119,21 @@ Return ONLY this JSON (no preamble, no markdown):
   "best_immediate_action": "<The single best opportunity and exactly how to apply — platform, URL, deadline>"
 }}
 
-Find 8-12 opportunities. Include a mix of:
-- 3-4 internships (Internshala priority)
-- 2-3 entry-level jobs or PPO opportunities
-- 1-2 hackathons/contests from Unstop (great for Tier 2/3 students)
+Find 8-12 opportunities. 
+
+IMPORTANT — URL RELIABILITY RULES:
+- 404 links are a CRITICAL FAILURE. 
+- DO NOT use specific job IDs or slugs (e.g. /internship/detail/slug-123) unless you are 100% sure they are live today.
+- PREFER search-category URLs which are guaranteed to work 100% of the time.
+- For Internshala: use `https://internshala.com/internships/{{skill}}-internship` or `category-{{category}}`
+- For Unstop: use `https://unstop.com/hackathons?search={{role}}`
+- For LinkedIn: use `https://www.linkedin.com/jobs/search/?keywords={{role}}&location=India`
+- If giving a specific company direct link, use their main career page if the direct job link is complex.
+
+Include a mix of:
+- 3-4 internships (Internshala search links priority)
+- 2-3 entry-level jobs (LinkedIn/Naukri search links)
+- 1-2 hackathons/contests from Unstop
 - 1-2 from company career pages directly
 
 Sort by match_score descending. Be honest about match_score — don't give 95+ unless truly exceptional fit."""

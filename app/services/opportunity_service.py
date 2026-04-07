@@ -183,9 +183,19 @@ async def fetch_opportunities(
         best_action    = f"Go to Internshala right now and search for '{skills[0] if skills else 'software'} internship' — filter by stipend ₹5000+ and apply to 5 today."
         used_gpt_search = False
 
+    # ── Final Merge: GPT Results + Curated Fallbacks ───────────────────
+    # Mix in 3 guaranteed-working platform search links at the top
+    guaranteed = build_fallback_opportunities(skills, target_roles, year)[:3]
+    for g in guaranteed:
+        g["match_score"] = 99  # Mark as high-priority "Verified Search"
+        g["match_reason"] = "🔥 Guaranteed live search: browse all current matching roles on this platform."
+    
+    final_opps = guaranteed + opportunities
+    final_opps.sort(key=lambda x: x.get("match_score", 0), reverse=True)
+
     # ── Save to database ───────────────────────────────────────────────
     saved_ids = []
-    for opp in opportunities[:12]:  # cap at 12
+    for opp in final_opps[:12]:  # cap at 12
         try:
             row = await db.fetchrow(
                 """
@@ -214,15 +224,12 @@ async def fetch_opportunities(
         except Exception:
             continue
 
-    # ── Sort by match_score ────────────────────────────────────────────
-    opportunities.sort(key=lambda x: x.get("match_score", 0), reverse=True)
-
     return {
-        "opportunities": opportunities,
+        "opportunities": final_opps[:12],
         "search_summary": search_summary,
         "best_immediate_action": best_action,
         "source": "gpt_search" if used_gpt_search else "curated_fallback",
-        "count": len(opportunities),
+        "count": len(final_opps[:12]),
     }
 
 
