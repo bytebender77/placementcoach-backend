@@ -54,11 +54,17 @@ def build_scoring_prompt(
     year: str,
     target_roles: list,
     target_companies: list,
+    co_curricular: list,
+    achievements: list,
+    certifications: list,
     base_score: dict,        # from rule-based scorer — used as anchor
 ) -> str:
     skills_str    = ", ".join(skills)
     roles_str     = ", ".join(target_roles)     if target_roles     else "Software Engineer / Analyst"
     companies_str = ", ".join(target_companies) if target_companies else "product and service companies"
+    cocurr_str    = ", ".join(co_curricular)    if co_curricular    else "None reported"
+    achieve_str   = ", ".join(achievements)     if achievements     else "None reported"
+    certs_str     = ", ".join(certifications)   if certifications   else "None reported"
 
     tier_labels = {
         "tier1": "Tier 1 (IIT / NIT / BITS / IIIT)",
@@ -84,6 +90,9 @@ CGPA         : {cgpa}/10
 Skills       : {skills_str}
 Target Roles : {roles_str}
 Companies    : {companies_str}
+Co-curricular: {cocurr_str}
+Achievements : {achieve_str}
+Certifications: {certs_str}
 
 ━━━ RESUME CONTENT (first 2000 chars) ━━━
 {resume_trimmed}

@@ -26,6 +26,13 @@ class AnalysisRequest(BaseModel):
     skills: List[str]
     target_roles: List[str] = []
     target_companies: List[str] = []
+    co_curricular: List[str] = []
+    achievements: List[str] = []
+    certifications: List[str] = []
+    github_url: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    open_to_remote: bool = True
+    preferred_locations: List[str] = []
 
 
 class AnalysisOut(BaseModel):

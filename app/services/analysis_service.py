@@ -53,6 +53,13 @@ async def run_analysis(
     year: str,
     target_roles: list,
     target_companies: list,
+    co_curricular: list,
+    achievements: list,
+    certifications: list,
+    github_url: str,
+    linkedin_url: str,
+    open_to_remote: bool,
+    preferred_locations: list,
     user_id: str,
     resume_id: str,
     db,
@@ -72,7 +79,8 @@ async def run_analysis(
     ats_user_prompt = build_ats_prompt(resume_text, target_roles, target_companies)
     scoring_user_prompt = build_scoring_prompt(
         resume_text, cgpa, skills, college_tier, year,
-        target_roles, target_companies, base_score
+        target_roles, target_companies, co_curricular,
+        achievements, certifications, base_score
     )
 
     ats_result, scoring_result = await asyncio.gather(
@@ -83,8 +91,12 @@ async def run_analysis(
     # Step 3: Upsert profile
     profile_row = await db.fetchrow(
         """
-        INSERT INTO profiles (user_id, cgpa, college_tier, year, skills, target_roles, target_companies)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO profiles (
+            user_id, cgpa, college_tier, year, skills, target_roles, target_companies,
+            co_curricular, achievements, certifications, github_url, linkedin_url,
+            open_to_remote, preferred_locations
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         ON CONFLICT (user_id) DO UPDATE SET
             cgpa = EXCLUDED.cgpa,
             college_tier = EXCLUDED.college_tier,
@@ -92,11 +104,20 @@ async def run_analysis(
             skills = EXCLUDED.skills,
             target_roles = EXCLUDED.target_roles,
             target_companies = EXCLUDED.target_companies,
+            co_curricular = EXCLUDED.co_curricular,
+            achievements = EXCLUDED.achievements,
+            certifications = EXCLUDED.certifications,
+            github_url = EXCLUDED.github_url,
+            linkedin_url = EXCLUDED.linkedin_url,
+            open_to_remote = EXCLUDED.open_to_remote,
+            preferred_locations = EXCLUDED.preferred_locations,
             updated_at = NOW()
         RETURNING id
         """,
         user_id, cgpa, college_tier, year,
         skills, target_roles, target_companies,
+        co_curricular, achievements, certifications,
+        github_url, linkedin_url, open_to_remote, preferred_locations,
     )
 
     # Step 4: Save analysis
