@@ -2,3 +2,8 @@
 __pycache__/
 *.pyc
 venv/
+
+# PageIndex data (local cache — ephemeral)
+data/uploads/
+data/trees/
+data/faiss_indexes/
