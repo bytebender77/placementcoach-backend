@@ -25,5 +25,7 @@ async def close_pool():
 async def get_db() -> asyncpg.Connection:
     """FastAPI dependency — yields a connection from the pool."""
     global _pool
+    if _pool is None:
+        raise RuntimeError("Database pool not initialised. Server may still be starting up.")
     async with _pool.acquire() as conn:
         yield conn

@@ -20,6 +20,8 @@ def _get_redis():
     global _redis_client
     if _redis_client is not None:
         return _redis_client
+    if not settings.REDIS_URL or not settings.REDIS_URL.strip():
+        return None
     try:
         import redis
         _redis_client = redis.from_url(
