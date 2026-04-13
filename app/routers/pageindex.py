@@ -29,7 +29,7 @@ from app.pageindex.models.tree import ChatRequest, MultiChatRequest, ChatRespons
 from app.pageindex.services.pdf_parser import extract_pages
 from app.pageindex.services.tree_builder import build_tree
 from app.pageindex.services.tree_store import (
-    save_tree, load_tree, document_exists, list_documents, _node_to_dict
+    save_tree, load_tree, document_exists, list_documents, delete_tree, _node_to_dict
 )
 from app.pageindex.services.faiss_service import build_faiss_index
 from app.pageindex.services.cache_service import cache_invalidate
@@ -104,8 +104,7 @@ async def upload_document(
 @router.get("/documents")
 async def list_all_documents(current_user: dict = Depends(get_current_user)):
     """List all indexed documents with metadata."""
-    docs = list_documents()
-    return {"documents": docs, "count": len(docs)}
+    return list_documents()
 
 
 @router.get("/tree/{document_id}")
@@ -125,24 +124,15 @@ async def get_tree(document_id: str, current_user: dict = Depends(get_current_us
 
 
 @router.delete("/{document_id}", status_code=204)
-async def delete_document(
+async def remove_document(
     document_id: str,
     current_user: dict = Depends(get_current_user),
 ):
     """Remove a document's tree, FAISS index, and cache entries."""
-    import os
     if not document_exists(document_id):
         raise HTTPException(status_code=404, detail="Document not found.")
 
-    tree_path = Path(settings.PAGEINDEX_DATA_DIR) / "trees" / f"{document_id}.json"
-    if tree_path.exists():
-        os.remove(tree_path)
-
-    for ext in [".faiss", ".faiss.npy", ".meta.pkl"]:
-        fp = Path(settings.PAGEINDEX_DATA_DIR) / "faiss_indexes" / f"{document_id}{ext}"
-        if fp.exists():
-            os.remove(fp)
-
+    delete_tree(document_id)
     cache_invalidate(document_id)
     return None
 
