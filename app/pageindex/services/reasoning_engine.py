@@ -36,18 +36,23 @@ USER QUERY: {query}
 CURRENT NODE: "{current_title}"
 CURRENT NODE CONTENT PREVIEW: {content_preview}
 
-AVAILABLE CHILDREN (nodes you can explore):
+AVAILABLE CHILDREN (nodes you can explore next):
 {children_list}
 
 ALREADY VISITED: {visited_titles}
 
-TASK: Decide which child nodes to explore next, or stop if you have enough information.
+TASK:
+- If this node or its content is relevant to the query, collect it.
+- If it has children worth exploring, select them.
+- If you have gathered enough context, stop.
+
+IMPORTANT: If there are NO children (leaf node) and the content is relevant, set decision to "collect" and has_enough_context based on whether you need more.
 
 Return ONLY valid JSON:
 {{
-  "decision": "<'explore' | 'go_deeper' | 'collect_and_continue' | 'stop'>",
+  "decision": "<'explore' | 'collect' | 'collect_and_continue' | 'go_deeper' | 'stop'>",
   "selected_node_ids": ["<id1>", "<id2>"],
-  "reasoning": "<Why you chose these nodes>",
+  "reasoning": "<Why you made this decision>",
   "confidence": <0.0 to 1.0>,
   "has_enough_context": <true|false>
 }}"""
@@ -68,7 +73,7 @@ Instructions:
 3. Cite specific sections by referencing node titles in [brackets]
 4. Do not make up information not present in the context
 
-Provide:
+Return ONLY valid JSON:
 {{
   "answer": "<your complete answer>",
   "confidence": <0.0-1.0>,
@@ -159,7 +164,12 @@ async def traverse_and_answer(
         if depth > settings.MAX_TRAVERSAL_DEPTH:
             continue
 
-        content_preview = current_node.content[:400].replace("\n", " ")
+        # ── Leaf node shortcut ────────────────────────────────────────────────
+        # If a node has no children, ask the LLM if its content is relevant.
+        # Skip the "select children" step — there are no children to select.
+        is_leaf = len(current_node.children) == 0
+
+        content_preview = current_node.content[:600].replace("\n", " ")
         visited_titles = [n.title for n in _get_visited_nodes(root, visited)]
 
         nav_prompt = NAVIGATION_PROMPT.format(
@@ -172,7 +182,17 @@ async def traverse_and_answer(
 
         try:
             nav_decision = await _navigate(nav_prompt)
-        except Exception:
+        except Exception as nav_err:
+            # Navigation failed — still make progress:
+            # 1. Collect this node if it's a leaf (content is all we have)
+            if is_leaf and current_node.id not in collected_node_ids:
+                collected_node_ids.append(current_node.id)
+                path = get_node_path(root, current_node.id)
+                reasoning_path.extend(p for p in path if p not in reasoning_path)
+            # 2. Always enqueue children so traversal continues
+            for child in current_node.children:
+                if child.id not in visited:
+                    queue.append((child, depth + 1))
             continue
 
         step_counter += 1
@@ -191,25 +211,56 @@ async def traverse_and_answer(
             confidence=confidence,
         ))
 
-        if decision in ("collect_and_continue", "go_deeper") or (
-            decision == "explore" and confidence >= 0.5
-        ):
-            if current_node.id not in collected_node_ids:
-                collected_node_ids.append(current_node.id)
-                path = get_node_path(root, current_node.id)
-                reasoning_path.extend(p for p in path if p not in reasoning_path)
+        # Collect this node if the decision says so, or if it's a relevant leaf
+        should_collect = (
+            decision in ("collect", "collect_and_continue", "go_deeper")
+            or (decision == "explore" and confidence >= 0.5)
+            or (is_leaf and decision != "stop" and confidence >= 0.4)
+        )
+
+        if should_collect and current_node.id not in collected_node_ids:
+            collected_node_ids.append(current_node.id)
+            path = get_node_path(root, current_node.id)
+            reasoning_path.extend(p for p in path if p not in reasoning_path)
 
         if has_enough or decision == "stop":
             break
 
+        # Enqueue children for further traversal
         for child in current_node.children:
             if child.id in selected_ids and child.id not in visited:
                 queue.insert(0, (child, depth + 1))
 
-        if decision == "explore" and not selected_ids:
+        # If LLM said "explore" without selecting specific children,
+        # enqueue all unvisited children
+        if decision in ("explore", "go_deeper", "collect_and_continue") and not selected_ids:
             for child in current_node.children:
                 if child.id not in visited:
                     queue.append((child, depth + 1))
+
+    # ── Hard fallback: if traversal collected nothing, take ALL leaf nodes ──
+    # This handles: flat trees, API failures, low-confidence traversal
+    if not collected_node_ids:
+        def _collect_leaves(node: PageIndexNode):
+            if not node.children:
+                return [node.id]
+            leaves = []
+            for child in node.children:
+                leaves.extend(_collect_leaves(child))
+            return leaves
+
+        leaf_ids = _collect_leaves(root)
+        # If no leaves either (shouldn't happen), use root itself
+        collected_node_ids = leaf_ids if leaf_ids else [root.id]
+        reasoning_path = [root.title, "[hard-fallback: all leaves collected]"]
+        reasoning_steps.append(ReasoningStep(
+            step=step_counter + 1,
+            node_id="fallback",
+            node_title="Hard fallback",
+            decision="collect",
+            reasoning="Traversal collected no nodes — using all leaf content as context.",
+            confidence=0.5,
+        ))
 
     final_confidence = (
         sum(s.confidence for s in reasoning_steps) / len(reasoning_steps)

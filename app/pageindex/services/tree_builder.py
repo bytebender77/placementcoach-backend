@@ -68,12 +68,13 @@ Return ONLY valid JSON in this exact structure:
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
 async def _call_gpt_json(prompt: str) -> dict:
+    # Tree building needs more tokens than regular chat — 4096 minimum
     response = await client.chat.completions.create(
         model=settings.OPENAI_MODEL,
         messages=[{"role": "user", "content": prompt}],
         response_format={"type": "json_object"},
         temperature=0.1,
-        max_tokens=settings.OPENAI_MAX_TOKENS,
+        max_tokens=4096,
     )
     return json.loads(response.choices[0].message.content)
 
@@ -165,7 +166,12 @@ async def build_tree(
 
     try:
         raw_tree = await _call_gpt_json(prompt)
-    except Exception:
+        # Validate that GPT gave us actual children
+        if not raw_tree.get("children"):
+            print(f"[PageIndex] GPT returned tree with no children — using fallback")
+            raw_tree = _build_fallback_tree(pages)
+    except Exception as e:
+        print(f"[PageIndex] GPT tree build failed ({e}) — using flat fallback")
         raw_tree = _build_fallback_tree(pages)
 
     raw_tree["id"] = "root"
