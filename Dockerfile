@@ -5,6 +5,7 @@ WORKDIR /app
 # Install system deps for pdfplumber
 RUN apt-get update && apt-get install -y \
     libpoppler-cpp-dev \
+    poppler-utils \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
