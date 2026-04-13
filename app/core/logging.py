@@ -10,7 +10,6 @@ Usage:
     log.info("payment_captured", user_id="abc", amount=49)
 """
 import logging
-import json
 import sys
 
 
@@ -34,11 +33,41 @@ class StructuredFormatter(logging.Formatter):
         return base
 
 
-def get_logger(name: str) -> logging.Logger:
+class StructuredLogger:
+    """
+    Wraps a stdlib Logger so callers can pass keyword arguments:
+        log.info("event_name", user_id="abc", amount=49)
+    These kwargs are injected into the LogRecord as `extra` fields,
+    which StructuredFormatter then picks up and prints.
+    """
+
+    def __init__(self, logger: logging.Logger):
+        self._logger = logger
+
+    def _log(self, level: int, msg: str, **kwargs):
+        self._logger.log(level, msg, extra=kwargs)
+
+    def debug(self, msg: str, **kwargs):
+        self._log(logging.DEBUG, msg, **kwargs)
+
+    def info(self, msg: str, **kwargs):
+        self._log(logging.INFO, msg, **kwargs)
+
+    def warning(self, msg: str, **kwargs):
+        self._log(logging.WARNING, msg, **kwargs)
+
+    def error(self, msg: str, **kwargs):
+        self._log(logging.ERROR, msg, **kwargs)
+
+    def critical(self, msg: str, **kwargs):
+        self._log(logging.CRITICAL, msg, **kwargs)
+
+
+def get_logger(name: str) -> "StructuredLogger":
     logger = logging.getLogger(name)
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(StructuredFormatter())
         logger.addHandler(handler)
         logger.setLevel(logging.INFO)
-    return logger
+    return StructuredLogger(logger)
