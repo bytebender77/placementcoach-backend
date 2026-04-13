@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.db.connection import create_pool, close_pool
-from app.routers import auth, resume, analysis, results, opportunities, pageindex
+from app.routers import auth, resume, analysis, results, opportunities, pageindex, billing
 
 
 @asynccontextmanager
@@ -50,6 +50,7 @@ app.include_router(analysis.router)
 app.include_router(results.router)
 app.include_router(opportunities.router)
 app.include_router(pageindex.router)
+app.include_router(billing.router)
 
 
 @app.get("/health")

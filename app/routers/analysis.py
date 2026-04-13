@@ -5,6 +5,7 @@ from app.models.analysis import AnalysisRequest
 from app.services import analysis_service
 from app.services.resume_service import extract_text_from_bytes
 from app.services.storage_service import get_presigned_url
+from app.middleware.quota_middleware import require_analysis_quota, record_analysis_usage
 import httpx
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
@@ -15,6 +16,7 @@ async def analyze_profile(
     data: AnalysisRequest,
     current_user: dict = Depends(get_current_user),
     db=Depends(get_db),
+    _quota_check=Depends(require_analysis_quota),
 ):
     user_id = str(current_user["id"])
 
@@ -56,6 +58,10 @@ async def analyze_profile(
         resume_id=str(resume_row["id"]),
         db=db,
     )
+
+    # Record usage against monthly quota
+    await record_analysis_usage(user_id, result["id"], db)
+
     return result
 
 

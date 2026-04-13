@@ -36,8 +36,13 @@ class Settings(BaseSettings):
     MAX_CONTEXT_TOKENS: int = 6000
 
     # Redis (optional — PageIndex cache; degrades gracefully if unavailable)
-    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_URL: str = ""
     CACHE_TTL_SECONDS: int = 3600
+
+    # ── Razorpay (payment gateway for INR subscriptions) ─────────────────
+    RAZORPAY_KEY_ID: str = ""
+    RAZORPAY_KEY_SECRET: str = ""
+    RAZORPAY_WEBHOOK_SECRET: str = ""
 
     # App
     APP_ENV: str = "development"

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.db.connection import get_db
 from app.core.dependencies import get_current_user
 from app.services import opportunity_service, career_path_service
+from app.middleware.quota_middleware import require_opportunities_feature, require_career_path_feature
 import json
 
 router = APIRouter(prefix="/opportunities", tags=["opportunities"])
@@ -12,6 +13,7 @@ async def find_opportunities(
     data: dict,
     current_user: dict = Depends(get_current_user),
     db=Depends(get_db),
+    _gate=Depends(require_opportunities_feature),
 ):
     """
     Fetch real internship/job opportunities for this student.
@@ -112,6 +114,7 @@ async def generate_career_path(
     data: dict,
     current_user: dict = Depends(get_current_user),
     db=Depends(get_db),
+    _gate=Depends(require_career_path_feature),
 ):
     """
     Generate full career path analysis:

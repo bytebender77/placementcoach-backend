@@ -22,6 +22,10 @@ async def register_user(data: UserCreate, db) -> dict:
         data.email, hashed, data.full_name,
     )
 
+    # Provision free plan for the new user
+    from app.services.subscription_service import provision_free_plan
+    await provision_free_plan(str(row["id"]), db)
+
     token = create_access_token(str(row["id"]), row["email"])
     return {"token": token, "user": dict(row)}
 
