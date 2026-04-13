@@ -4,13 +4,19 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.db.connection import create_pool, close_pool
-from app.routers import auth, resume, analysis, results, opportunities
+from app.routers import auth, resume, analysis, results, opportunities, pageindex
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     await create_pool()
+    # Ensure PageIndex data directories exist
+    import pathlib
+    for subdir in ("uploads", "trees", "faiss_indexes"):
+        pathlib.Path(settings.PAGEINDEX_DATA_DIR).joinpath(subdir).mkdir(
+            parents=True, exist_ok=True
+        )
     yield
     # Shutdown
     await close_pool()
@@ -43,6 +49,7 @@ app.include_router(resume.router)
 app.include_router(analysis.router)
 app.include_router(results.router)
 app.include_router(opportunities.router)
+app.include_router(pageindex.router)
 
 
 @app.get("/health")

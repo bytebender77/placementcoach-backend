@@ -23,6 +23,21 @@ class Settings(BaseSettings):
     # OpenAI
     OPENAI_API_KEY: str
     OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_MAX_TOKENS: int = 2000
+
+    # ── PageIndex settings ────────────────────────────────
+    PAGEINDEX_DATA_DIR: str = "./data"
+    PAGEINDEX_STORAGE_MODE: str = "local"   # "local" | "s3"
+
+    # Reasoning engine tuning
+    MAX_TRAVERSAL_DEPTH: int = 6
+    MAX_NODES_VISITED: int = 20
+    CONFIDENCE_THRESHOLD: float = 0.65
+    MAX_CONTEXT_TOKENS: int = 6000
+
+    # Redis (optional — PageIndex cache; degrades gracefully if unavailable)
+    REDIS_URL: str = "redis://localhost:6379/0"
+    CACHE_TTL_SECONDS: int = 3600
 
     # App
     APP_ENV: str = "development"

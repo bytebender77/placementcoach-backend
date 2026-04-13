@@ -11,3 +11,11 @@ pdfplumber==0.11.0
 openai==1.30.1
 python-dotenv==1.0.1
 httpx==0.27.0
+
+# ── PageIndex additions ────────────────────────────────────
+faiss-cpu>=1.9.0
+numpy==1.26.4
+redis==5.0.4
+structlog==24.1.0
+tenacity==8.3.0
+# tiktoken  # optional — for exact token counting; requires Rust toolchain to build
